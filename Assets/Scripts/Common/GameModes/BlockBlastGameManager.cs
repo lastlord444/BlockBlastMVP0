@@ -247,12 +247,14 @@ namespace Common.GameModes
                 slotObj.transform.SetParent(panelObj.transform, false);
                 
                 var img = slotObj.AddComponent<UnityEngine.UI.Image>();
-                img.color = Color.clear; 
-                img.raycastTarget = true; 
+                img.color = Color.clear;
+                img.raycastTarget = true;
 
                 var le = slotObj.AddComponent<UnityEngine.UI.LayoutElement>();
-                le.preferredWidth = 150;
-                le.preferredHeight = 150;
+                le.preferredWidth = 140;  // Slot boyutu biraz küçült (150 -> 140)
+                le.preferredHeight = 140;
+                le.flexibleWidth = 0;    // Expand yok
+                le.flexibleHeight = 0;   // Expand yok
                 
                 var slot = slotObj.AddComponent<ShapeSlot>();
                 

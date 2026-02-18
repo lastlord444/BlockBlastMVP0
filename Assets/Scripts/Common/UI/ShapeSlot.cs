@@ -13,10 +13,10 @@ namespace Common.UI
         [SerializeField] private CanvasGroup _canvasGroup;
 
         // Configuration
-        // _blockSize dinamik hesaplanır (SlotSize / maxDimension * 0.85)
-        private float _spacing = 1f; // Azalt
+        // _blockSize dinamik hesaplanır (SlotSize / maxDimension * X)
+        private float _spacing = 0.5f; // Çok azalt (bloklar birbirine yakın)
         private const float _slotSize = 150f; // Layout'ta preferredWidth/Height ile uyumlu
-        private const float _maxScaleFactor = 0.80f; // 85% -> 80% (ekstra kırmızı azalt)
+        private const float _maxScaleFactor = 0.60f; // 80% -> 60% (blokları küçült)
 
         public void Setup(RectTransform previewRoot, RectTransform rectTransform, CanvasGroup canvasGroup)
         {
@@ -102,7 +102,8 @@ namespace Common.UI
             float blockSizeByWidth  = (availW - (widthInBlocks  - 1) * _spacing) / widthInBlocks;
             float blockSizeByHeight = (availH - (heightInBlocks - 1) * _spacing) / heightInBlocks;
             float dynamicBlockSize  = Mathf.Min(blockSizeByWidth, blockSizeByHeight);
-            dynamicBlockSize = Mathf.Max(dynamicBlockSize, 4f); // minimum 4px (sıfır/negatif guard)
+            // Minimum 4px (2f çok küçük, görünmez)
+            dynamicBlockSize = Mathf.Max(dynamicBlockSize, 4f);
 
             float totalWidth  = widthInBlocks  * dynamicBlockSize + (widthInBlocks  - 1) * _spacing;
             float totalHeight = heightInBlocks * dynamicBlockSize + (heightInBlocks - 1) * _spacing;
