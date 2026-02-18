@@ -226,19 +226,17 @@ namespace Common.GameModes
             var rect = panelObj.AddComponent<RectTransform>();
             rect.SetParent(parent, false);
 
-            // Pinned-to-bottom: sabit yükseklik (200 canvas unit), alt kenardan 16 unit boşluk.
-            // Bu yaklaşım CanvasScaler ile doğru ölçeklenir; yüzde-anchor + sabit padding gibi
-            // aspect ratio'ya göre değişmez.
+            // KRİTİK FIX: Alt kısımdan taşma → ScorePanel'dan AŞAĞI (üst panel %15, alt panel %25)
             rect.anchorMin = new Vector2(0f, 0f);
-            rect.anchorMax = new Vector2(1f, 0f);
-            rect.pivot = new Vector2(0.5f, 0f);
-            rect.anchoredPosition = new Vector2(0f, 16f);  // Alt kenardan 16 canvas-unit
-            rect.sizeDelta = new Vector2(0f, 200f);        // Sabit 200 canvas-unit yükseklik
+            rect.anchorMax = new Vector2(1f, 0.25f); // Alt %25 (tam güvenli)
+            rect.pivot = new Vector2(0.5f, 0.5f);      // Pivot center
+            rect.anchoredPosition = Vector2.zero;        // Ortalanmış
+            rect.sizeDelta = Vector2.zero;                 // Anchor'la genişlet
 
             var layout = panelObj.AddComponent<UnityEngine.UI.HorizontalLayoutGroup>();
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.spacing = 20;
-            layout.padding = new RectOffset(20, 20, 10, 10); // Eşit üst/alt padding
+            layout.padding = new RectOffset(20, 20, 20, 20); // Eşit padding (hem üst hem alt)
             layout.childForceExpandHeight = false;
             layout.childForceExpandWidth = false;
 
@@ -249,12 +247,14 @@ namespace Common.GameModes
                 slotObj.transform.SetParent(panelObj.transform, false);
                 
                 var img = slotObj.AddComponent<UnityEngine.UI.Image>();
-                img.color = Color.clear; 
-                img.raycastTarget = true; 
+                img.color = Color.clear;
+                img.raycastTarget = true;
 
                 var le = slotObj.AddComponent<UnityEngine.UI.LayoutElement>();
-                le.preferredWidth = 150;
-                le.preferredHeight = 150;
+                le.preferredWidth = 140;  // Slot boyutu biraz küçült (150 -> 140)
+                le.preferredHeight = 140;
+                le.flexibleWidth = 0;    // Expand yok
+                le.flexibleHeight = 0;   // Expand yok
                 
                 var slot = slotObj.AddComponent<ShapeSlot>();
                 
