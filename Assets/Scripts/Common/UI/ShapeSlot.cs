@@ -14,9 +14,9 @@ namespace Common.UI
 
         // Configuration
         // _blockSize dinamik hesaplanır (SlotSize / maxDimension * 0.85)
-        private float _spacing = 2f;
+        private float _spacing = 1f; // Azalt
         private const float _slotSize = 150f; // Layout'ta preferredWidth/Height ile uyumlu
-        private const float _maxScaleFactor = 0.85f; // Slot içinde doluluk oranı (padding)
+        private const float _maxScaleFactor = 0.80f; // 85% -> 80% (ekstra kırmızı azalt)
 
         public void Setup(RectTransform previewRoot, RectTransform rectTransform, CanvasGroup canvasGroup)
         {
