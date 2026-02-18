@@ -1,23 +1,25 @@
 # Block Blast MVP0 🎮
 
-> Android hedefli **1010 / Block Blast** tarzı puzzle oyunu — 10x10 grid, 3 shape slot, drag-drop yerleştirme, row/col clear ve combo sistemi.
+> Android hedefli **1010 / Block Blast** tarzı puzzle oyunu — 10x10 grid, 3 shape slot, drag-drop yerleştirme, row/col clear + combo sistemi.
 
-> _Bu repo orijinalde bir Match3-SDK fork olarak başladı, ardından Block Blast MVP0'a evirildi._
+> _Bu repo orijinalde Match3-SDK fork olarak başladı, ardından Block Blast MVP0'a evrildi. Yeni repo: [BlockBlastMVP0](https://github.com/lastlord444/BlockBlastMVP0)._
 
 ---
 
 ## ✅ MVP0 Feature Checklist
 
 - [x] 10×10 board (checkerboard premium görünüm)
-- [x] 3 shape slot + anlık refill (Tetris-style parçalar)
+- [x] 3 shape slot + anında refill (Tetris-style parçalar)
 - [x] Drag & drop + grid snap + placement validation
 - [x] Row / column clear + skor sistemi + combo multiplier
-- [x] Game Over: Mevcut parçalar hiçbir yere sığmazsa tetiklenir
+- [x] Game Over: Mevcut parçalar hiçbir yere sığamazsa tetiklenir
 - [x] Best Score: `PlayerPrefs` ile persistent
 - [x] Ghost preview (gri=geçerli, kırmızı=geçersiz)
 - [x] Safe area bottom tray fix (Android notch/home bar uyumlu)
 - [x] **Juice v1** — SFX (place / invalid / clear / combo / gameover), haptic, camera shake
 - [x] **Juice v2** — Line-based juice (1× SFX per line, HashSet dedupe), particle fallback cache
+- [x] **Juice v2** — Place punch-scale (1.0→1.08→1.0, ~0.12s)
+- [x] **Juice v2** — Preview shapes auto-center+fit (slot overflow fixed, 8px padding)
 
 ---
 
@@ -27,20 +29,19 @@
 - **Unity:** 6000.3.x LTS (6000.3.8f1 test edildi)
 - **Platformlar:** Windows Editor, Android
 
-### Adımlar
+### Kurulum
 ```bash
-git clone https://github.com/lastlord444/idlgames.git
-cd idlgames
-git checkout feature/juice-v2-polish   # En son değişiklikler
-# veya: git checkout skeleton/match3sdk  (stabil base branch)
+git clone https://github.com/lastlord444/BlockBlastMVP0.git
+cd BlockBlastMVP0
+# Unity Hub > Add > Proje klasörünü seç
+# Unity 6000.3.x LTS ile aç (ilk açılışta ~2-3 dk package import)
 ```
 
-1. Unity Hub > **Add** > `idlgames/` klasörünü seç
-2. Unity **6000.3.x LTS** ile aç (ilk açılışta ~2-3 dk package import)
-3. `Assets/Scenes/MainScene.unity` sahnesini aç
-4. **Play** butonuna bas
+### Oyunu Başlat
+1. Unity Editor'de `Assets/Scenes/MainScene.unity` sahnesini aç
+2. **Play** butonuna bas
 
-> **Beklenen:** Console 0 error / 0 warning. Ekranın altında 3 shape slot görünür.
+> **Beklenen:** Console'da 0 error / 0 warning. Ekranın altında 3 shape slot görünür.
 
 ---
 
@@ -64,7 +65,7 @@ Unity Editor → File → Build Settings
   → Build (debug) veya Build And Run
 ```
 
-> Android Build Support'u Unity Hub > Installs > Modüller'den kurman gerekir.
+> Android Build Support'u Unity Hub > Installs > 6000.3.x > Modüller'den kurun.
 
 ---
 
@@ -72,9 +73,8 @@ Unity Editor → File → Build Settings
 
 | Ekran | Açıklama |
 |-------|----------|
-| [`gameplay_juice_v2.png`](Assets/Screenshots/gameplay_juice_v2.png) | Line clear efektleri + skor artışı |
-| [`console_clean_juice_v2.png`](Assets/Screenshots/console_clean_juice_v2.png) | Console: 0 error / 0 warning |
-| [`ProofPack_gameplay_clean.png`](Assets/Screenshots/ProofPack_gameplay_clean.png) | Play mode: 3 slot görünür |
+| [`gameplay_juice_v2.png`](Assets/Screenshots/ProofPack_gameplay_juice_v2.png) | Line clear efektleri + skor artışı |
+| [`console_clean.png`](Assets/Screenshots/console_clean.png) | Console: 0 error / 0 warning |
 
 ---
 
@@ -87,7 +87,7 @@ Unity Editor → File → Build Settings
 | Juice | `GameJuiceManager` + `LineClearSequencer` (coroutine-based) |
 | UI | TextMeshPro + SafeAreaFitter |
 | Build | IL2CPP + ARM64 |
-| Persisted State | PlayerPrefs (best score) |
+| Persisted State | PlayerPrefs (best score)
 
 ---
 
@@ -101,7 +101,7 @@ Assets/Scripts/Common/
 │   ├── GameJuiceManager.cs        ← SFX / haptic / shake yönetimi
 │   └── LineClearSequencer.cs      ← Line clear VFX (flash + particle)
 ├── UI/
-│   ├── ShapeSlot.cs               ← Dinamik blok boyutu hesabı
+│   ├── ShapeSlot.cs               ← Auto-center+fit (8px padding)
 │   ├── SafeAreaFitter.cs          ← Android safe area uyumu
 │   └── DevOnlyVisibility.cs       ← Debug UI → release'de gizle
 ├── BlockBlastInputManager.cs      ← Drag / hover / drop events
@@ -116,15 +116,14 @@ Assets/Scripts/Common/
 ## 🗺️ Roadmap
 
 ### MVP1 (Sonraki)
-- [ ] Punch-scale animasyonu (yerleştirilen bloklar için)
-- [ ] Line clear staggered flash (tile başına ~5ms fark)
-- [ ] Board shake per line (camera veya root transform)
-- [ ] Invalid drop pitch-down blip
-- [ ] Proper particle prefab + object pool
+- [ ] Progressive difficulty (puanlar zorlaştıkça)
+- [ ] Daily quests / missions
+- [ ] Undo/Redo (son hamleyi geri al)
+- [ ] Hint sistemi (olası yer gösterimi)
 
 ### MVP2
-- [ ] Admob banner / interstitial entegrasyonu
-- [ ] Firebase Analytics (first_open, level_end event)
+- [ ] Ads entegrasyonu (Admob banner + interstitial)
+- [ ] Firebase Analytics (first_open, line_clear, game_over)
 - [ ] Tema sistemi (renk paketi)
 - [ ] Leaderboard (Play Games veya custom)
 
@@ -132,13 +131,13 @@ Assets/Scripts/Common/
 
 ## 🔗 Bağlantılar
 
-- **Repo:** https://github.com/lastlord444/idlgames
-- **Branch (stable):** `skeleton/match3sdk`
-- **Branch (latest):** `feature/juice-v2-polish`
+- **Repo (Yeni):** https://github.com/lastlord444/BlockBlastMVP0
+- **Branch:** main (only branch)
+- **Eski Repo (fork):** https://github.com/lastlord444/idlgames
 - **Match3-SDK (base):** https://github.com/LibraStack/Match3-SDK
 
 ---
 
 **Son Güncelleme:** 2026-02-18  
 **Geliştirici:** @lastlord444  
-**Durum:** 🟡 MVP0 — Core Loop Tamamlandı, Juice v2 Polish Devam Ediyor
+**Durum:** 🟢 MVP0 READY FOR RELEASE

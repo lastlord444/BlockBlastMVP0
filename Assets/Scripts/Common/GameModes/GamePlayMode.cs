@@ -15,6 +15,7 @@ namespace Common.GameModes
 
         public GamePlayMode(IAppContext appContext)
         {
+            UnityEngine.Debug.Log("GamePlayMode Constructor Called");
             _unityGame = appContext.Resolve<UnityGame>();
             _gameUiCanvas = appContext.Resolve<IGameUiCanvas>();
             _boardFillStrategies = appContext.Resolve<IBoardFillStrategy<IUnityGridSlot>[]>();
@@ -28,13 +29,32 @@ namespace Common.GameModes
 
         public void Activate()
         {
-            _unityGame.LevelGoalAchieved += OnLevelGoalAchieved;
-            _gameUiCanvas.StrategyChanged += OnStrategyChanged;
+            try
+            {
+                if (_unityGame == null) UnityEngine.Debug.LogError("_unityGame is null!");
+                if (_gameUiCanvas == null) UnityEngine.Debug.LogError("_gameUiCanvas is null!");
 
-            _unityGame.SetGameBoardFillStrategy(GetSelectedFillStrategy());
-            _unityGame.StartAsync().Forget();
+                _unityGame.LevelGoalAchieved += OnLevelGoalAchieved;
+                _gameUiCanvas.StrategyChanged += OnStrategyChanged;
 
-            _gameUiCanvas.ShowMessage("Game started.");
+                // Stop Match3 logic
+                //_unityGame.SetGameBoardFillStrategy(GetSelectedFillStrategy());
+                //_unityGame.StartAsync().Forget();
+                
+                // Bootstrap Block Blast
+                // Ensure single instance
+                if (UnityEngine.Object.FindFirstObjectByType<BlockBlastGameManager>() == null)
+                {
+                    var bbManager = new UnityEngine.GameObject("BlockBlastGameManager").AddComponent<BlockBlastGameManager>();
+                    UnityEngine.Debug.Log("BlockBlastGameManager Created by GamePlayMode.");
+                }
+                
+                _gameUiCanvas.ShowMessage("Block Blast Started.");
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogError($"Error in GamePlayMode.Activate: {e.Message}\n{e.StackTrace}");
+            }
         }
 
         public void Deactivate()
@@ -44,6 +64,14 @@ namespace Common.GameModes
 
             _unityGame.StopAsync().Forget();
             _gameUiCanvas.ShowMessage("Game finished.");
+            
+            // Cleanup BlockBlast if needed? 
+            // Usually scene reload handles it, but for mode switch:
+            var manager = UnityEngine.Object.FindFirstObjectByType<BlockBlastGameManager>();
+            if (manager != null)
+            {
+                UnityEngine.Object.Destroy(manager.gameObject);
+            }
         }
 
         private void OnLevelGoalAchieved(object sender, LevelGoal<IUnityGridSlot> levelGoal)
@@ -53,7 +81,7 @@ namespace Common.GameModes
 
         private void OnStrategyChanged(object sender, int index)
         {
-            _unityGame.SetGameBoardFillStrategy(GetFillStrategy(index));
+           // _unityGame.SetGameBoardFillStrategy(GetFillStrategy(index));
         }
 
         private IBoardFillStrategy<IUnityGridSlot> GetSelectedFillStrategy()

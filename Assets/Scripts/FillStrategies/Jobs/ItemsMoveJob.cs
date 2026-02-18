@@ -23,20 +23,23 @@ namespace FillStrategies.Jobs
 
         public override async UniTask ExecuteAsync(CancellationToken cancellationToken = default)
         {
+#if UNITY_ANDROID
+            await UniTask.CompletedTask;
+#else
             var itemsSequence = DOTween.Sequence();
 
             foreach (var itemData in _itemsData)
             {
                 var itemMoveTween = CreateItemMoveTween(itemData);
                 _ = itemsSequence
-                    .Join(itemMoveTween)
-                    .PrependInterval(itemMoveTween.Duration() * IntervalDuration);
+                    .Join(itemMoveTween);
             }
 
             await itemsSequence
                 .SetDelay(_delay, false)
                 .SetEase(Ease.Flash)
-                .WithCancellation(cancellationToken);
+                .ToUniTask(cancellationToken: cancellationToken);
+#endif
         }
     }
 }

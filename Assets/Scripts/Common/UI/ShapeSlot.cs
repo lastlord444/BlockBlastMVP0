@@ -72,7 +72,7 @@ namespace Common.UI
 
         private void CreateBlockVisuals(ShapeData shape)
         {
-            // 1. Calculate Bounds
+            // 1. Bounds hesapla
             int minR = int.MaxValue, maxR = int.MinValue;
             int minC = int.MaxValue, maxC = int.MinValue;
 
@@ -84,33 +84,43 @@ namespace Common.UI
                 if (block.localCol > maxC) maxC = block.localCol;
             }
 
-            int widthInBlocks = maxC - minC + 1;
+            int widthInBlocks  = maxC - minC + 1;
             int heightInBlocks = maxR - minR + 1;
 
-            // 2. Dinamik block size hesapla: slot içine tam sığsın, taşmasın
-            float availableSize = _slotSize * _maxScaleFactor;
-            float blockSizeByWidth  = (availableSize - (widthInBlocks  - 1) * _spacing) / widthInBlocks;
-            float blockSizeByHeight = (availableSize - (heightInBlocks - 1) * _spacing) / heightInBlocks;
-            
-            // İkisinden küçüğünü al: 150px slot, 4 blok yüksekliğinde şekil sığmalı
-            float dynamicBlockSize = Mathf.Min(blockSizeByWidth, blockSizeByHeight);
-            // Minimum 8px, maksimum 40px (orijinal değer)
-            dynamicBlockSize = Mathf.Clamp(dynamicBlockSize, 8f, 40f);
+            // 2. Slot'un ACTUAL canvas boyutunu kullan (LayoutGroup tarafından belirlenir).
+            //    _rectTransform.rect.width/height layout aşamasından sonra doğru gelir.
+            //    Fallback: _slotSize sabit.
+            float slotW = (_rectTransform != null && _rectTransform.rect.width  > 1f) ? _rectTransform.rect.width  : _slotSize;
+            float slotH = (_rectTransform != null && _rectTransform.rect.height > 1f) ? _rectTransform.rect.height : _slotSize;
+
+            // Padding: 8px her taraf (hem genişlik hem yükseklik için)
+            float padPx = 8f;
+            float availW = slotW - padPx * 2f;
+            float availH = slotH - padPx * 2f;
+
+            // 3. Block size: her iki boyuta tam sığsın
+            float blockSizeByWidth  = (availW - (widthInBlocks  - 1) * _spacing) / widthInBlocks;
+            float blockSizeByHeight = (availH - (heightInBlocks - 1) * _spacing) / heightInBlocks;
+            float dynamicBlockSize  = Mathf.Min(blockSizeByWidth, blockSizeByHeight);
+            dynamicBlockSize = Mathf.Max(dynamicBlockSize, 4f); // minimum 4px (sıfır/negatif guard)
 
             float totalWidth  = widthInBlocks  * dynamicBlockSize + (widthInBlocks  - 1) * _spacing;
             float totalHeight = heightInBlocks * dynamicBlockSize + (heightInBlocks - 1) * _spacing;
 
-            // ÖNEMLI: Preview root'un boyutunu shape bounds'una ayarla
+            // 4. PreviewRoot boyutunu shape bounds'una ayarla (pivot 0.5,0.5 merkezde)
             if (_previewRoot != null)
             {
+                _previewRoot.anchorMin = new Vector2(0.5f, 0.5f);
+                _previewRoot.anchorMax = new Vector2(0.5f, 0.5f);
+                _previewRoot.pivot     = new Vector2(0.5f, 0.5f);
+                _previewRoot.anchoredPosition = Vector2.zero; // Slot ortasına
                 _previewRoot.sizeDelta = new Vector2(totalWidth, totalHeight);
             }
 
-            // 3. Instantiate Blocks
-            
-            // LOGICAL CENTER (orta blok (0,0)'da olsun)
-            int centerR = Mathf.RoundToInt((minR + maxR) / 2f);
-            int centerC = Mathf.RoundToInt((minC + maxC) / 2f);
+            // 5. Block'ları yerleştir — bounds center'ına göre offset
+            // Gerçek merkez (blok grid koordinatında, float): (minC+maxC)/2, (minR+maxR)/2
+            float centerCf = (minC + maxC) / 2f;
+            float centerRf = (minR + maxR) / 2f;
 
             foreach (var block in shape.Blocks)
             {
@@ -119,18 +129,19 @@ namespace Common.UI
 
                 var img = blockObj.AddComponent<Image>();
                 img.color = shape.ShapeColor;
-                
+
                 var rect = blockObj.GetComponent<RectTransform>();
-                if (rect == null) rect = blockObj.AddComponent<RectTransform>(); 
+                if (rect == null) rect = blockObj.AddComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot     = new Vector2(0.5f, 0.5f);
                 rect.sizeDelta = new Vector2(dynamicBlockSize, dynamicBlockSize);
 
-                // Merkeze hizala
-                int relR = block.localRow - centerR;
-                int relC = block.localCol - centerC;
-
-                float xPos = relC * (dynamicBlockSize + _spacing);
+                // Bounds center'ından offset
+                float relC = block.localCol - centerCf;
+                float relR = block.localRow - centerRf;
+                float xPos =  relC * (dynamicBlockSize + _spacing);
                 float yPos = -relR * (dynamicBlockSize + _spacing);
-
                 rect.anchoredPosition = new Vector2(xPos, yPos);
             }
         }

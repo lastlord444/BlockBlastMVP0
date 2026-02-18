@@ -17,6 +17,7 @@ namespace Common.Interfaces
         bool IsPointerOnBoard(Vector3 worldPointerPosition, out GridPosition gridPosition);
 
         Vector3 GetWorldPosition(GridPosition gridPosition);
+        void SetTileColor(GridPosition gridPosition, Color color);
 
         TileGroup GetTileGroup(GridPosition gridPosition);
     }

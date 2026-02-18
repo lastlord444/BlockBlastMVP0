@@ -1,0 +1,9 @@
+BoardConfig (Assets/Resources/BoardConfig.asset):
+{
+    "_rowCount": 10,
+    "_columnCount": 10,
+    "_tileSize": 0.6000000238418579,
+    "_nextPieceCount": 3,
+    "_scorePerLine": 100,
+    "_comboMultiplier": 2
+}

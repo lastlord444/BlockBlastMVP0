@@ -19,7 +19,20 @@ namespace Common.UI
         {
             if (_trayPanel == null || _canvas == null)
             {
-                Debug.LogWarning("[SafeAreaFitter] TrayPanel veya Canvas atanmadı.");
+                // Inspector'dan referans atanmamış — bu component
+                // CreateGameUI() tarafından runtime'da da ekleniyor.
+                // Sahne prefab'ındaki eski instance için self-anchor uygula.
+                var rt = GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    rt.anchorMin = Vector2.zero;
+                    rt.anchorMax = Vector2.one;
+                    rt.offsetMin = Vector2.zero;
+                    rt.offsetMax = Vector2.zero;
+                }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.Log("[SafeAreaFitter] Referans yok — fullscreen anchor uygulandı.");
+#endif
                 return;
             }
 

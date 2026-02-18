@@ -25,8 +25,8 @@ namespace Common
 
         protected override void OnGameStarted()
         {
-            _inputSystem.PointerDown += OnPointerDown;
-            _inputSystem.PointerDrag += OnPointerDrag;
+            //_inputSystem.PointerDown += OnPointerDown;
+            //_inputSystem.PointerDrag += OnPointerDrag;
         }
 
         protected override void OnGameStopped()

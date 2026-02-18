@@ -27,6 +27,9 @@ namespace FillStrategies.Jobs
 
         public override async UniTask ExecuteAsync(CancellationToken cancellationToken = default)
         {
+#if UNITY_ANDROID
+            await UniTask.CompletedTask;
+#else
             var itemsSequence = DOTween.Sequence();
 
             foreach (var itemData in _itemsData)
@@ -40,7 +43,8 @@ namespace FillStrategies.Jobs
             await itemsSequence
                 .SetDelay(_delay, false)
                 .SetEase(Ease.Flash)
-                .WithCancellation(cancellationToken);
+                .ToUniTask(cancellationToken: cancellationToken);
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

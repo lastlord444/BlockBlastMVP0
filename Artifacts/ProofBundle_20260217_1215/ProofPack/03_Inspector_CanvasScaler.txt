@@ -1,0 +1,4 @@
+Canvas Scaler Inspector Dump
+ReferenceResolution: (1080.00, 1920.00)
+MatchWidthOrHeight: 0,5
+UiScaleMode: ScaleWithScreenSize

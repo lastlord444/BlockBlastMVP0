@@ -1,0 +1,5 @@
+C:/Users/musab/OneDrive/Desktop/idlgames/.utmp/RelWithDebInfo/i652p3s2/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/musab/OneDrive/Desktop/idlgames/.utmp/RelWithDebInfo/i652p3s2/arm64-v8a/CMakeFiles/rebuild_cache.dir
+C:/Users/musab/OneDrive/Desktop/idlgames/.utmp/RelWithDebInfo/i652p3s2/arm64-v8a/FramePacing/CMakeFiles/swappywrapper.dir
+C:/Users/musab/OneDrive/Desktop/idlgames/.utmp/RelWithDebInfo/i652p3s2/arm64-v8a/FramePacing/CMakeFiles/edit_cache.dir
+C:/Users/musab/OneDrive/Desktop/idlgames/.utmp/RelWithDebInfo/i652p3s2/arm64-v8a/FramePacing/CMakeFiles/rebuild_cache.dir

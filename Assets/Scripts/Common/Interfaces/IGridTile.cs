@@ -8,5 +8,6 @@ namespace Common.Interfaces
     {
         void SetActive(bool value);
         void SetWorldPosition(Vector3 worldPosition);
+        void SetColor(Color color);
     }
 }

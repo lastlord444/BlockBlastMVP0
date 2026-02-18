@@ -11,6 +11,8 @@ namespace Common.GridTiles
         public abstract bool IsLocked { get; }
         public abstract bool CanContainItem { get; }
 
+        public abstract void SetColor(Color color);
+
         public void SetActive(bool value)
         {
             gameObject.SetActive(value);

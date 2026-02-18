@@ -18,5 +18,13 @@ namespace Common.GridTiles
         {
             return _spriteAtlas.GetSprite(spriteName);
         }
+
+        public override void SetColor(Color color)
+        {
+            if(TryGetComponent<SpriteRenderer>(out var renderer))
+            {
+                renderer.color = color;
+            }
+        }
     }
 }

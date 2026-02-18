@@ -22,6 +22,9 @@ namespace FillStrategies.Jobs
 
         public override async UniTask ExecuteAsync(CancellationToken cancellationToken = default)
         {
+#if UNITY_ANDROID
+            await UniTask.CompletedTask;
+#else
             var itemsSequence = DOTween.Sequence();
 
             foreach (var item in _items)
@@ -33,7 +36,8 @@ namespace FillStrategies.Jobs
                 _ = itemsSequence.Join(item.Transform.DOScale(Vector3.one, ScaleDuration));
             }
 
-            await itemsSequence.SetEase(Ease.OutBounce).WithCancellation(cancellationToken);
+            await itemsSequence.SetEase(Ease.OutBounce).ToUniTask(cancellationToken: cancellationToken);
+#endif
         }
     }
 }
