@@ -169,10 +169,14 @@ namespace Common.GameModes
             var canvas = FindFirstObjectByType<Canvas>();
             if (canvas == null) return;
 
-            // Create SafeArea Container
+            // Create SafeArea Container — FULLSCREEN (child'lar buna göre yerleştiriliyor)
             var safeAreaObj = new GameObject("SafeAreaContainer");
             var safeRect = safeAreaObj.AddComponent<RectTransform>();
             safeRect.SetParent(canvas.transform, false);
+            safeRect.anchorMin = Vector2.zero;    // Bottom-left
+            safeRect.anchorMax = Vector2.one;     // Top-right
+            safeRect.offsetMin = Vector2.zero;
+            safeRect.offsetMax = Vector2.zero;
 
             // SafeAreaFitter: safe area'yı her frame kontrol eder, değişince günceller
             safeAreaObj.AddComponent<SafeAreaFitter>();
