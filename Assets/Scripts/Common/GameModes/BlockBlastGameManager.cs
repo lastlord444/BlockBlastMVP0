@@ -237,14 +237,6 @@ namespace Common.GameModes
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.spacing = 20;
             layout.padding = new RectOffset(20, 20, 20, 20); // Eşit padding (hem üst hem alt)
-            layout.childControlSize = false;
-            layout.childForceExpandHeight = false;
-            layout.childForceExpandWidth = false;
-
-            var layout = panelObj.AddComponent<UnityEngine.UI.HorizontalLayoutGroup>();
-            layout.childAlignment = TextAnchor.MiddleCenter;
-            layout.spacing = 20;
-            layout.padding = new RectOffset(20, 20, 10, 10); // Eşit üst/alt padding
             layout.childForceExpandHeight = false;
             layout.childForceExpandWidth = false;
 
