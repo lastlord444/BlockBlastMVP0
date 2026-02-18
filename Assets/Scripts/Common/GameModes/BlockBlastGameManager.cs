@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Common.Shapes;
 using Common.UI;
@@ -699,7 +700,7 @@ namespace Common.GameModes
             // JUICE: Başarılı yerleştirme sesi
             GameJuiceManager.Instance?.OnPlace();
 
-            // 1. Mark as occupied and set color
+            // 1. Mark as occupied and set color + punch-scale animation
             foreach (var block in shape.Blocks)
             {
                 int r = origin.RowIndex + block.localRow;
@@ -707,6 +708,11 @@ namespace Common.GameModes
                 
                 _occupiedCells[r, c] = true;
                 _boardRenderer.SetTileColor(new GridPosition(r, c), shape.ShapeColor);
+                
+                // Punch-scale: 1.0 → 1.08 → 1.0 (~0.12s)
+                var tileTransform = _boardRenderer.GetTileTransform(r, c);
+                if (tileTransform != null)
+                    StartCoroutine(PunchScaleTile(tileTransform));
             }
             
             // Score per block
@@ -921,6 +927,31 @@ namespace Common.GameModes
                 // Ensure it's the last sibling to be on top
                 _gameOverPanel.transform.SetAsLastSibling();
             }
+        }
+
+        // ── Juice v2: Place Punch-Scale ─────────────────────────────────────────────
+        // Allocation minimal: yield return null loop (~0.12s), WaitForSeconds kaçınılır.
+        private IEnumerator PunchScaleTile(Transform t)
+        {
+            if (t == null) yield break;
+
+            const float punchDuration = 0.12f;
+            const float peakScale     = 1.08f;
+            float elapsed = 0f;
+            Vector3 baseScale = t.localScale;
+
+            while (elapsed < punchDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                float n  = elapsed / punchDuration;
+                // Üçgen dalga: 0→peak→0
+                float s  = (n < 0.5f) ? (peakScale - 1f) * (n * 2f) + 1f
+                                       : (peakScale - 1f) * ((1f - n) * 2f) + 1f;
+                t.localScale = baseScale * s;
+                yield return null;
+            }
+
+            t.localScale = baseScale; // Reset
         }
     }
 }

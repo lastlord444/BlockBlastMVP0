@@ -18,10 +18,10 @@ public class App : MonoBehaviour
         _appContext.Construct();
         _gameModes = new IGameMode[]
         {
-            new DrawGameBoardMode(_appContext),
-            new GameInitMode(_appContext),
+            // new DrawGameBoardMode(_appContext),
+            // new GameInitMode(_appContext),
             new GamePlayMode(_appContext),
-            new GameResetMode(_appContext)
+            // new GameResetMode(_appContext)
         };
     }
 
@@ -32,6 +32,7 @@ public class App : MonoBehaviour
 
     private void OnEnable()
     {
+        if (_gameModes == null) return; // Domain reload guard
         foreach (var gameMode in _gameModes)
         {
             gameMode.Finished += OnGameModeFinished;
@@ -40,6 +41,7 @@ public class App : MonoBehaviour
 
     private void OnDisable()
     {
+        if (_gameModes == null) return; // Domain reload guard
         foreach (var gameMode in _gameModes)
         {
             gameMode.Finished -= OnGameModeFinished;
@@ -48,9 +50,10 @@ public class App : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (_gameModes == null) return;
         foreach (var gameMode in _gameModes)
         {
-            gameMode.Dispose();
+            gameMode?.Dispose();
         }
     }
 

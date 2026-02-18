@@ -11,12 +11,8 @@ namespace Common
 {
     public class UnityGameBoardRenderer : MonoBehaviour, IUnityGameBoardRenderer, IGameBoardDataProvider<IUnityGridSlot>
     {
-        [Space]
-        [SerializeField] private int _rowCount = 9;
-        [SerializeField] private int _columnCount = 9;
-
-        [Space]
-        [SerializeField] private float _tileSize = 0.6f;
+        [Header("Block Blast Configuration")]
+        [SerializeField] private BoardConfig _boardConfig;
 
         [Space]
         [SerializeField] private TileModel[] _gridTiles;
@@ -27,9 +23,29 @@ namespace Common
         private Vector3 _originPosition;
         private TileItemsPool _tileItemsPool;
 
+        // Board config properties (cached)
+        private int RowCount => _boardConfig.RowCount;
+        private int ColumnCount => _boardConfig.ColumnCount;
+        private float TileSize => _boardConfig.TileSize;
+
         private void Awake()
         {
+            if (_gridTiles == null)
+            {
+                Debug.LogError("_gridTiles reference is missing in UnityGameBoardRenderer! Please assign it in the Inspector.");
+                _gridTiles = new TileModel[0];
+            }
             _tileItemsPool = new TileItemsPool(_gridTiles, transform);
+            
+            // BoardConfig kontrolü ve otomatik yükleme
+            if (_boardConfig == null)
+            {
+                _boardConfig = Resources.Load<BoardConfig>("BoardConfig");
+                if (_boardConfig == null)
+                {
+                    Debug.LogError("BoardConfig atanmamış ve Resources'da bulunamadı! Assets/Resources/BoardConfig.asset oluştur ve assign et.");
+                }
+            }
         }
 
         public IUnityGridSlot[,] GetGameBoardSlots(int level)
@@ -37,11 +53,21 @@ namespace Common
             return _gameBoardSlots;
         }
 
+        public void SetBoardConfig(BoardConfig config)
+        {
+            _boardConfig = config;
+        }
+
+        public BoardConfig GetBoardConfig()
+        {
+            return _boardConfig;
+        }
+
         public void CreateGridTiles(int[,] data)
         {
-            _gridSlotTiles = new IGridTile[_rowCount, _columnCount];
-            _gameBoardSlots = new IUnityGridSlot[_rowCount, _columnCount];
-            _originPosition = GetOriginPosition(_rowCount, _columnCount);
+            _gridSlotTiles = new IGridTile[RowCount, ColumnCount];
+            _gameBoardSlots = new IUnityGridSlot[RowCount, ColumnCount];
+            _originPosition = _boardConfig.GetOriginPosition();
 
             CreateGridTiles(TileGroup.Available);
         }
@@ -81,17 +107,40 @@ namespace Common
 
         public bool IsPositionOnGrid(GridPosition gridPosition)
         {
-            return GridMath.IsPositionOnGrid(gridPosition, _rowCount, _columnCount);
+            return GridMath.IsPositionOnGrid(gridPosition, RowCount, ColumnCount);
         }
 
         public Vector3 GetWorldPosition(GridPosition gridPosition)
         {
-            return GetWorldPosition(gridPosition.RowIndex, gridPosition.ColumnIndex);
+            return _boardConfig.GetWorldPosition(gridPosition.RowIndex, gridPosition.ColumnIndex);
         }
 
         public TileGroup GetTileGroup(GridPosition gridPosition)
         {
             return (TileGroup) _gridSlotTiles[gridPosition.RowIndex, gridPosition.ColumnIndex].GroupId;
+        }
+
+        public void SetTileColor(GridPosition gridPosition, Color color)
+        {
+            if (_gridSlotTiles == null) return;
+            
+            if(IsPositionOnGrid(gridPosition))
+            {
+                var tile = _gridSlotTiles[gridPosition.RowIndex, gridPosition.ColumnIndex];
+                if (tile != null)
+                {
+                    tile.SetColor(color);
+                }
+            }
+        }
+
+        public Transform GetTileTransform(int r, int c)
+        {
+            var gp = new GridPosition(r, c);
+            if (_gridSlotTiles == null || !IsPositionOnGrid(gp)) return null;
+            var tile = _gridSlotTiles[r, c];
+            if (tile is MonoBehaviour mb) return mb.transform;
+            return null;
         }
 
         public void ResetGridTiles()
@@ -110,32 +159,26 @@ namespace Common
             return IsPositionOnGrid(gridPosition) && IsTileActive(gridPosition);
         }
 
+        public GridPosition GetRawGridPosition(Vector3 worldPointerPosition)
+        {
+            var raw = _boardConfig.GetGridPosition(worldPointerPosition);
+            return new GridPosition(raw.row, raw.col);
+        }
+
         private GridPosition GetGridPositionByPointer(Vector3 worldPointerPosition)
         {
-            var rowIndex = (worldPointerPosition - _originPosition).y / _tileSize;
-            var columnIndex = (worldPointerPosition - _originPosition).x / _tileSize;
-
-            return new GridPosition(Convert.ToInt32(-rowIndex), Convert.ToInt32(columnIndex));
-        }
-
-        private Vector3 GetWorldPosition(int rowIndex, int columnIndex)
-        {
-            return new Vector3(columnIndex, -rowIndex) * _tileSize + _originPosition;
-        }
-
-        private Vector3 GetOriginPosition(int rowCount, int columnCount)
-        {
-            var offsetY = Mathf.Floor(rowCount / 2.0f) * _tileSize;
-            var offsetX = Mathf.Floor(columnCount / 2.0f) * _tileSize;
-
-            return new Vector3(-offsetX, offsetY);
+            if (_boardConfig.TryGetGridPosition(worldPointerPosition, out var gridPos))
+            {
+                return new GridPosition(gridPos.row, gridPos.col);
+            }
+            return new GridPosition(-1, -1);
         }
 
         private void CreateGridTiles(TileGroup defaultTileGroup)
         {
-            for (var rowIndex = 0; rowIndex < _rowCount; rowIndex++)
+            for (var rowIndex = 0; rowIndex < RowCount; rowIndex++)
             {
-                for (var columnIndex = 0; columnIndex < _columnCount; columnIndex++)
+                for (var columnIndex = 0; columnIndex < ColumnCount; columnIndex++)
                 {
                     var gridTile = GetTile(rowIndex, columnIndex, defaultTileGroup);
 
@@ -148,9 +191,9 @@ namespace Common
 
         private void SetTilesGroup(TileGroup group)
         {
-            for (var rowIndex = 0; rowIndex < _rowCount; rowIndex++)
+            for (var rowIndex = 0; rowIndex < RowCount; rowIndex++)
             {
-                for (var columnIndex = 0; columnIndex < _columnCount; columnIndex++)
+                for (var columnIndex = 0; columnIndex < ColumnCount; columnIndex++)
                 {
                     SetTile(rowIndex, columnIndex, group);
                 }
@@ -174,7 +217,7 @@ namespace Common
         private IGridTile GetTile(int rowIndex, int columnIndex, TileGroup group)
         {
             var gridTile = _tileItemsPool.GetGridTile(group);
-            gridTile.SetWorldPosition(GetWorldPosition(rowIndex, columnIndex));
+            gridTile.SetWorldPosition(_boardConfig.GetWorldPosition(rowIndex, columnIndex));
 
             return gridTile;
         }
