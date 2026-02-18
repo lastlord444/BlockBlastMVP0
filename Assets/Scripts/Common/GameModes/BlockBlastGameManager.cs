@@ -403,8 +403,10 @@ namespace Common.GameModes
             cam.orthographicSize = Mathf.Max(sizeBasedOnWidth, sizeBasedOnHeight);
             
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log($"[DEV] BoardConfig: Rows={_boardConfig.RowCount}, Cols={_boardConfig.ColumnCount}, TileSize={_boardConfig.TileSize}");
             Debug.Log($"[DEV] Camera Fit: OrthoSize={cam.orthographicSize}, Aspect={cam.aspect}, TargetWidth={targetWidth}");
+#endif
 #endif
             // Debug.Log($"Camera Setup: Board {boardWidth}x{boardHeight}, Aspect {screenAspect}, Size {cam.orthographicSize}");
             
@@ -584,7 +586,9 @@ namespace Common.GameModes
                            gridPos.ColumnIndex >= 0 && gridPos.ColumnIndex < _boardConfig.ColumnCount;
             
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log($"[DEV] Drop onBoard={onBoard} cell=({gridPos.RowIndex},{gridPos.ColumnIndex}) canPlace={canPlace}");
+#endif
 #endif
 
             if (canPlace)
