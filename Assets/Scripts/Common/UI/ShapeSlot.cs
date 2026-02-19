@@ -18,6 +18,9 @@ namespace Common.UI
         private const float MIN_TILE = 18f;
         private const float MAX_TILE = 40f;
 
+        // Drag Configuration
+        private float _dragLiftHeight = 100f; // Visual lift amount (approx 1.5-2 cells)
+
         public void Setup(RectTransform previewRoot, RectTransform rectTransform, CanvasGroup canvasGroup)
         {
             _previewRoot = previewRoot;
@@ -30,6 +33,11 @@ namespace Common.UI
         private Transform _originalParent;
         private int _originalSiblingIndex;
         private Canvas _rootCanvas;
+        private RectTransform _rootCanvasRect;
+
+        // Drag State
+        private Vector2 _dragOffset;
+        private bool _isDragging;
 
         public event Action<ShapeSlot, PointerEventData> OnDragStarted;
         public event Action<ShapeSlot, PointerEventData> OnDragUpdated;
@@ -121,7 +129,7 @@ namespace Common.UI
             // 7. PreviewRoot ayarla
             _previewRoot.anchorMin = new Vector2(0.5f, 0.5f);
             _previewRoot.anchorMax = new Vector2(0.5f, 0.5f);
-            _previewRoot.pivot = new Vector2(0.5f, 0.5f);
+            _previewRoot.pivot = new Vector2(0.5f, 0.0f); // Bottom-Center pivot as requested
             _previewRoot.anchoredPosition = Vector2.zero;
             _previewRoot.sizeDelta = Vector2.zero;
 
@@ -130,8 +138,6 @@ namespace Common.UI
             float centerY = (minR + maxR) * 0.5f;
 
             // 9. Block'ları yerleştir — board ile aynı yön
-            // Board: new Vector3(col, -row) * tileSize (Y-down)
-            // UI: anchoredPosition.y = -(row - centerY) * step (Y-down match)
             foreach (var block in shape.Blocks)
             {
                 var blockObj = new GameObject("Block");
@@ -183,63 +189,90 @@ namespace Common.UI
                 float visColOffset = (block.localCol - centerX) * step;
                 rect.anchoredPosition = new Vector2(visColOffset, visRowOffset);
             }
+            
+            // Set dynamic lift height based on tile size (approx 1.5 tiles above)
+            _dragLiftHeight = step * 1.5f;
         }
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            if (_currentShape == null) return;
-
-            _initialPosition = _rectTransform.anchoredPosition;
-            _originalParent = transform.parent;
-            _originalSiblingIndex = transform.GetSiblingIndex();
-
-            // Canvas root'u bul (drag sırasında reparent için)
-            if (_rootCanvas == null)
-                _rootCanvas = GetComponentInParent<Canvas>()?.rootCanvas;
-
-            OnDragStarted?.Invoke(this, eventData);
-            
-            // Premium UX: Scale up for "lifted" feel (industry standard: 1.1-1.2x)
-            _rectTransform.localScale = Vector3.one * 1.15f;
-            _canvasGroup.alpha = 1.0f;
+           // Handled in OnBeginDrag for cleaner logic, but we need to capture initial state here if needed.
+           // Leaving empty as OnBeginDrag handles initialization.
         }
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            // Debug.Log("Drag Started on ShapeSlot");
+            if (_currentShape == null) return;
+            
+            _isDragging = true;
+            _initialPosition = _rectTransform.anchoredPosition;
+            _originalParent = transform.parent;
+            _originalSiblingIndex = transform.GetSiblingIndex();
+
+            // 1. Find Canvas Root
+            if (_rootCanvas == null)
+            {
+                _rootCanvas = GetComponentInParent<Canvas>()?.rootCanvas;
+                if (_rootCanvas != null)
+                {
+                    _rootCanvasRect = _rootCanvas.GetComponent<RectTransform>();
+                }
+            }
+
+            // 2. Reparent to Root (Keep World Position)
+            if (_rootCanvas != null)
+            {
+                transform.SetParent(_rootCanvas.transform, true);
+                transform.SetAsLastSibling(); // Render on top
+            }
+
+            // 3. Calculate Drag Offset
+            // We want the shape to stick to the finger relative to where we grabbed it, 
+            // BUT with a vertical lift so the user can see under their finger.
+            
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _rootCanvasRect, 
+                eventData.position, 
+                _rootCanvas.worldCamera, 
+                out Vector2 localPointerPos
+            );
+            
+            // Calculate current anchored position in Root Canvas space
+            Vector2 currentPos = _rectTransform.anchoredPosition;
+            
+            // Offset = ShapePos - PointerPos
+            _dragOffset = currentPos - localPointerPos;
+
+            // 4. Visual Feedback
+            _rectTransform.localScale = Vector3.one * 1.1f; // Slight scale up
+            _canvasGroup.blocksRaycasts = false; // Allow raycast to pass through to board
+
+
+            OnDragStarted?.Invoke(this, eventData);
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (_currentShape == null) return;
+            if (!_isDragging || _currentShape == null || _rootCanvasRect == null) return;
 
-            // İlk drag hareketinde canvas root'a reparent et (panel clipping'i önler)
-            if (_rootCanvas != null && transform.parent != _rootCanvas.transform)
+            // 1. Convert Screen Pointer to Local Canvas Space
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                _rootCanvasRect,
+                eventData.position,
+                _rootCanvas.worldCamera,
+                out Vector2 localPointerPos))
             {
-                // Dünya pozisyonunu koru, canvas root'a taşı
-                transform.SetParent(_rootCanvas.transform, true);
-                transform.SetAsLastSibling(); // Her şeyin üzerinde görünsün
-            }
+                // 2. Apply Offset + Lift
+                Vector2 targetPos = localPointerPos + _dragOffset;
+                
+                // Lift the shape UPwards (Y+) so it sits above the finger
+                targetPos.y += _dragLiftHeight;
 
-            _canvasGroup.alpha = 1.0f;
-
-            // Delta tabanlı hareket: parmağı smooth takip et
-            Vector2 delta = eventData.delta / transform.lossyScale.x;
-            _rectTransform.anchoredPosition += delta;
-
-            // Canvas sınırlarına clamp (canvas root'a göre)
-            if (_rootCanvas != null)
-            {
-                RectTransform canvasRect = _rootCanvas.GetComponent<RectTransform>();
-                if (canvasRect != null)
-                {
-                    Vector2 halfSize = _rectTransform.rect.size * 0.5f;
-                    Vector2 canvasHalf = canvasRect.rect.size * 0.5f;
-                    Vector2 pos = _rectTransform.anchoredPosition;
-                    pos.x = Mathf.Clamp(pos.x, -canvasHalf.x + halfSize.x, canvasHalf.x - halfSize.x);
-                    pos.y = Mathf.Clamp(pos.y, -canvasHalf.y + halfSize.y, canvasHalf.y - halfSize.y);
-                    _rectTransform.anchoredPosition = pos;
-                }
+                // 3. Apply to RectTransform
+                _rectTransform.anchoredPosition = targetPos;
+                
+                // 4. Clamp Removed (User feedback: Shape gets stuck at top)
+                // ClampToWindow(); 
             }
 
             OnDragUpdated?.Invoke(this, eventData);
@@ -247,26 +280,44 @@ namespace Common.UI
 
         public void OnEndDrag(PointerEventData eventData)
         {
-            // Debug.Log("Drag Ended on ShapeSlot");
+            // Handled in OnPointerUp usually to cover both drag-drop and click-release
         }
 
         public void OnPointerUp(PointerEventData eventData)
         {
             if (_currentShape == null) return;
+            
+            _isDragging = false;
 
-            // Orijinal parent'a geri dön (worldPositionStays=false → anchoredPosition doğru hesaplanır)
-            if (_originalParent != null && transform.parent != _originalParent)
+            // Logic handled by GameManager via OnDragEnded event (checking drop zone)
+            // If drop was handled (shape placed), GameManager will consume/reset.
+            // If not placed, we revert here.
+            
+            // Wait for one frame? No, event invocation is synchronous. 
+            // If placed, `Clear()` is called which resets state.
+            // If NOT placed, we revert visually.
+            
+            OnDragEnded?.Invoke(this, eventData);
+            
+            // If logic didn't clear the shape (i.e. invalid drop), return to slot
+            if (_currentShape != null) 
             {
-                transform.SetParent(_originalParent, false);
+                ReturnToSlot();
+            }
+        }
+        
+        private void ReturnToSlot()
+        {
+            if (_originalParent != null)
+            {
+                transform.SetParent(_originalParent, false); // false = resets local position automatically to some degree, but better explicit
                 transform.SetSiblingIndex(_originalSiblingIndex);
             }
 
-            // Scale ve pozisyonu sıfırla
-            _rectTransform.localScale = Vector3.one;
-            _canvasGroup.alpha = 1f;
             _rectTransform.anchoredPosition = _initialPosition;
-
-            OnDragEnded?.Invoke(this, eventData);
+            _rectTransform.localScale = Vector3.one;
+            _canvasGroup.blocksRaycasts = true;
+            _canvasGroup.alpha = 1f;
         }
     }
 }
