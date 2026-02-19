@@ -37,10 +37,126 @@ public class SceneAutoRepair : MonoBehaviour
         {
             var config = AssetDatabase.LoadAssetAtPath<BoardConfig>(AssetDatabase.GUIDToAssetPath(guids[0]));
             so.FindProperty("_boardConfig").objectReferenceValue = config;
-            Debug.Log($"Validator Configured with {config.name}");
+            // Debug.Log($"Validator Configured with {config.name}");
         }
         
         so.ApplyModifiedProperties();
+    }
+
+    [MenuItem("Block Blast/Rebuild Gameplay UI")]
+    public static void RebuildGameplayUI()
+    {
+        var canvas = GameObject.FindObjectOfType<Common.GameUiCanvas>();
+        if (canvas == null)
+        {
+            Debug.LogError("GameUiCanvas not found!");
+            return;
+        }
+
+        Transform gameplayPanel = canvas.transform.Find("GameplayPanel");
+        if (gameplayPanel == null)
+        {
+            var go = new GameObject("GameplayPanel");
+            go.transform.SetParent(canvas.transform, false);
+            gameplayPanel = go.transform;
+            
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        // Bottom Bar (Shape Slots)
+        Transform bottomBar = gameplayPanel.Find("BottomBar");
+        if (bottomBar == null)
+        {
+            var go = new GameObject("BottomBar");
+            go.transform.SetParent(gameplayPanel, false);
+            bottomBar = go.transform;
+
+            var rect = go.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0, 0);       // Bottom
+            rect.anchorMax = new Vector2(1, 0.25f);   // 25% height
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            // Horizontal Layout
+            var hlg = go.AddComponent<UnityEngine.UI.HorizontalLayoutGroup>();
+            hlg.childAlignment = TextAnchor.MiddleCenter;
+            hlg.spacing = 50;
+            hlg.childControlWidth = false;
+            hlg.childControlHeight = false;
+        }
+
+        // Create 3 Slots
+        var slots = new List<Common.UI.ShapeSlot>();
+        for (int i = 0; i < 3; i++)
+        {
+            try {
+                string name = $"ShapeSlot_{i}";
+                Transform slotTr = bottomBar.Find(name);
+                GameObject slotObj;
+                if (slotTr == null)
+                {
+                    slotObj = new GameObject(name);
+                    slotObj.transform.SetParent(bottomBar, false);
+                }
+                else
+                {
+                    slotObj = slotTr.gameObject;
+                }
+
+                var rect = slotObj.GetComponent<RectTransform>();
+                if (rect == null) rect = slotObj.AddComponent<RectTransform>();
+                rect.sizeDelta = new Vector2(250, 250); // Big enough for touch
+
+                var img = slotObj.GetComponent<UnityEngine.UI.Image>();
+                if (img == null) img = slotObj.AddComponent<UnityEngine.UI.Image>();
+                img.color = new Color(1, 1, 1, 0.1f); // Faint background
+
+                var component = slotObj.GetComponent<Common.UI.ShapeSlot>();
+                if (component == null) component = slotObj.AddComponent<Common.UI.ShapeSlot>();
+                
+                var cg = slotObj.GetComponent<CanvasGroup>();
+                if (cg == null) cg = slotObj.AddComponent<CanvasGroup>();
+
+                // Preview Root
+                Transform preview = slotObj.transform.Find("PreviewRoot");
+                if (preview == null)
+                {
+                    var pObj = new GameObject("PreviewRoot");
+                    pObj.transform.SetParent(slotObj.transform, false);
+                    preview = pObj.transform;
+                }
+                
+                // Assign refs
+                component.Setup(preview.GetComponent<RectTransform>(), rect, cg);
+                
+                slots.Add(component);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"Error creating slot {i}: {ex.Message}");
+            }
+        }
+
+        Debug.Log("Gameplay UI Rebuilt. Checking ShapeSlots assignment...");
+        
+        // Auto-assign to Manager
+        var manager = GameObject.FindObjectOfType<BlockBlastGameManager>();
+        if (manager != null)
+        {
+             SerializedObject so = new SerializedObject(manager);
+             var prop = so.FindProperty("_shapeSlots");
+             prop.arraySize = slots.Count;
+             for(int i=0; i<slots.Count; i++)
+             {
+                 prop.GetArrayElementAtIndex(i).objectReferenceValue = slots[i];
+             }
+             so.ApplyModifiedProperties();
+             Debug.Log("Assigned ShapeSlots to Manager.");
+        }
     }
 
     private static void RepairGameManager()
