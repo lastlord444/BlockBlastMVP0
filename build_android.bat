@@ -1,0 +1,1 @@
+"C:\Program Files\Unity\Hub\Editor\6000.3.8f1\Editor\Unity.exe" -quit -batchmode -projectPath "c:\Users\musab\OneDrive\Desktop\idlgames" -executeMethod AndroidBuildScript.ConfigureAndBuild -logFile "build_log.txt"
