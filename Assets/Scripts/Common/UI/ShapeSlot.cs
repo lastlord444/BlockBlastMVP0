@@ -13,10 +13,10 @@ namespace Common.UI
         [SerializeField] private CanvasGroup _canvasGroup;
 
         // Configuration
-        // _blockSize dinamik hesaplanır (SlotSize / maxDimension * 0.85)
-        private float _spacing = 2f;
-        private const float _slotSize = 150f; // Layout'ta preferredWidth/Height ile uyumlu
-        private const float _maxScaleFactor = 0.85f; // Slot içinde doluluk oranı (padding)
+        private const float PADDING = 8f;
+        private const float MAX_TILE_RATIO = 0.45f; // Slot boyutunun %45'i max tile
+        private const float MIN_TILE = 18f;
+        private const float MAX_TILE = 40f;
 
         public void Setup(RectTransform previewRoot, RectTransform rectTransform, CanvasGroup canvasGroup)
         {
@@ -72,6 +72,14 @@ namespace Common.UI
 
         private void CreateBlockVisuals(ShapeData shape)
         {
+            if (_previewRoot == null || shape == null || shape.Blocks.Count == 0) return;
+
+            // LayoutGroup/ContentSizeFitter devre dışı bırak (override engeli)
+            var lg = _previewRoot.GetComponent<UnityEngine.UI.LayoutGroup>();
+            if (lg != null) lg.enabled = false;
+            var csf = _previewRoot.GetComponent<UnityEngine.UI.ContentSizeFitter>();
+            if (csf != null) csf.enabled = false;
+
             // 1. Bounds hesapla
             int minR = int.MaxValue, maxR = int.MinValue;
             int minC = int.MaxValue, maxC = int.MinValue;
@@ -84,65 +92,96 @@ namespace Common.UI
                 if (block.localCol > maxC) maxC = block.localCol;
             }
 
-            int widthInBlocks  = maxC - minC + 1;
-            int heightInBlocks = maxR - minR + 1;
+            int widthCells  = maxC - minC + 1;
+            int heightCells = maxR - minR + 1;
+            int maxDim = Mathf.Max(widthCells, heightCells);
 
-            // 2. Slot'un ACTUAL canvas boyutunu kullan (LayoutGroup tarafından belirlenir).
-            //    _rectTransform.rect.width/height layout aşamasından sonra doğru gelir.
-            //    Fallback: _slotSize sabit.
-            float slotW = (_rectTransform != null && _rectTransform.rect.width  > 1f) ? _rectTransform.rect.width  : _slotSize;
-            float slotH = (_rectTransform != null && _rectTransform.rect.height > 1f) ? _rectTransform.rect.height : _slotSize;
+            // 2. Slot boyutu
+            Vector2 slotSize = (_rectTransform != null && _rectTransform.rect.width > 1f)
+                ? _rectTransform.rect.size
+                : new Vector2(150f, 150f);
 
-            // Padding: 8px her taraf (hem genişlik hem yükseklik için)
-            float padPx = 8f;
-            float availW = slotW - padPx * 2f;
-            float availH = slotH - padPx * 2f;
+            float innerW = Mathf.Max(1f, slotSize.x - PADDING * 2f);
+            float innerH = Mathf.Max(1f, slotSize.y - PADDING * 2f);
 
-            // 3. Block size: her iki boyuta tam sığsın
-            float blockSizeByWidth  = (availW - (widthInBlocks  - 1) * _spacing) / widthInBlocks;
-            float blockSizeByHeight = (availH - (heightInBlocks - 1) * _spacing) / heightInBlocks;
-            float dynamicBlockSize  = Mathf.Min(blockSizeByWidth, blockSizeByHeight);
-            dynamicBlockSize = Mathf.Max(dynamicBlockSize, 4f); // minimum 4px (sıfır/negatif guard)
+            // 3. Shape-fit (step)
+            float stepFit = Mathf.Min(innerW / maxDim, innerH / maxDim);
 
-            float totalWidth  = widthInBlocks  * dynamicBlockSize + (widthInBlocks  - 1) * _spacing;
-            float totalHeight = heightInBlocks * dynamicBlockSize + (heightInBlocks - 1) * _spacing;
+            // 4. Max tile sınır (1x1 dev olmasın)
+            float maxTile = Mathf.Min(innerW, innerH) * MAX_TILE_RATIO;
 
-            // 4. PreviewRoot boyutunu shape bounds'una ayarla (pivot 0.5,0.5 merkezde)
-            if (_previewRoot != null)
-            {
-                _previewRoot.anchorMin = new Vector2(0.5f, 0.5f);
-                _previewRoot.anchorMax = new Vector2(0.5f, 0.5f);
-                _previewRoot.pivot     = new Vector2(0.5f, 0.5f);
-                _previewRoot.anchoredPosition = Vector2.zero; // Slot ortasına
-                _previewRoot.sizeDelta = new Vector2(totalWidth, totalHeight);
-            }
+            // 5. Final step: clamp
+            float step = Mathf.Clamp(Mathf.Min(stepFit, maxTile), MIN_TILE, MAX_TILE);
+            step = Mathf.Floor(step); // Pixel snap
 
-            // 5. Block'ları yerleştir — bounds center'ına göre offset
-            // Gerçek merkez (blok grid koordinatında, float): (minC+maxC)/2, (minR+maxR)/2
-            float centerCf = (minC + maxC) / 2f;
-            float centerRf = (minR + maxR) / 2f;
+            // 6. Gap hesapla
+            float gap = Mathf.Clamp(Mathf.Round(step * 0.12f), 2f, 6f);
+            float visual = Mathf.Max(1f, step - gap);
 
+            // 7. PreviewRoot ayarla
+            _previewRoot.anchorMin = new Vector2(0.5f, 0.5f);
+            _previewRoot.anchorMax = new Vector2(0.5f, 0.5f);
+            _previewRoot.pivot = new Vector2(0.5f, 0.5f);
+            _previewRoot.anchoredPosition = Vector2.zero;
+            _previewRoot.sizeDelta = Vector2.zero;
+
+            // 8. Merkez hesapla
+            float centerX = (minC + maxC) * 0.5f;
+            float centerY = (minR + maxR) * 0.5f;
+
+            // 9. Block'ları yerleştir — board ile aynı yön
+            // Board: new Vector3(col, -row) * tileSize (Y-down)
+            // UI: anchoredPosition.y = -(row - centerY) * step (Y-down match)
             foreach (var block in shape.Blocks)
             {
                 var blockObj = new GameObject("Block");
                 blockObj.transform.SetParent(_previewRoot, false);
 
+                // LayoutGroup temizliği
+                var blockLg = blockObj.GetComponent<UnityEngine.UI.LayoutGroup>();
+                if (blockLg != null) blockLg.enabled = false;
+                var blockCsf = blockObj.GetComponent<UnityEngine.UI.ContentSizeFitter>();
+                if (blockCsf != null) blockCsf.enabled = false;
+
+                // Ana Image
                 var img = blockObj.AddComponent<Image>();
                 img.color = shape.ShapeColor;
 
+                // Kenarlık (border)
+                var outlineObj = new GameObject("Outline");
+                outlineObj.transform.SetParent(blockObj.transform, false);
+                var outlineImg = outlineObj.AddComponent<Image>();
+
+                Color outlineColor = new Color(
+                    Mathf.Max(0f, shape.ShapeColor.r - 0.3f),
+                    Mathf.Max(0f, shape.ShapeColor.g - 0.3f),
+                    Mathf.Max(0f, shape.ShapeColor.b - 0.3f),
+                    1f
+                );
+                outlineImg.color = outlineColor;
+
+                var outlineRect = outlineObj.GetComponent<RectTransform>();
+                if (outlineRect == null) outlineRect = outlineObj.AddComponent<RectTransform>();
+                outlineRect.anchorMin = Vector2.zero;
+                outlineRect.anchorMax = Vector2.one;
+                outlineRect.pivot = new Vector2(0.5f, 0.5f);
+                outlineRect.anchoredPosition = Vector2.zero;
+
+                float borderThickness = Mathf.Max(2f, visual * 0.1f);
+                outlineRect.sizeDelta = new Vector2(-borderThickness * 2f, -borderThickness * 2f);
+
+                // RectTransform
                 var rect = blockObj.GetComponent<RectTransform>();
                 if (rect == null) rect = blockObj.AddComponent<RectTransform>();
                 rect.anchorMin = new Vector2(0.5f, 0.5f);
                 rect.anchorMax = new Vector2(0.5f, 0.5f);
-                rect.pivot     = new Vector2(0.5f, 0.5f);
-                rect.sizeDelta = new Vector2(dynamicBlockSize, dynamicBlockSize);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = new Vector2(visual, visual);
 
-                // Bounds center'ından offset
-                float relC = block.localCol - centerCf;
-                float relR = block.localRow - centerRf;
-                float xPos =  relC * (dynamicBlockSize + _spacing);
-                float yPos = -relR * (dynamicBlockSize + _spacing);
-                rect.anchoredPosition = new Vector2(xPos, yPos);
+                // Board ile TAM AYNI YÖN: row arttıkça aşağı
+                float visRowOffset = -(block.localRow - centerY) * step;
+                float visColOffset = (block.localCol - centerX) * step;
+                rect.anchoredPosition = new Vector2(visColOffset, visRowOffset);
             }
         }
 
