@@ -383,20 +383,17 @@ namespace Common.GameModes
             float boardWidth = _boardConfig.ColumnCount * _boardConfig.TileSize;
             float boardHeight = _boardConfig.RowCount * _boardConfig.TileSize;
 
-            // Add Margin (e.g. 1 tile on each side, + extra for UI at bottom/top)
-            float margin = _boardConfig.TileSize * 1.5f; 
+            // Add minimal margin (tight fit for better visibility)
+            float margin = _boardConfig.TileSize * 0.5f;
             float targetWidth = boardWidth + margin;
-            // Height needs more margin for UI (Score top, Shapes bottom)
-            // Shapes panel is ~20% of screen. Top is ~15%.
-            // Let's ensure Width fits first (Priority for Portrait).
             
             float screenAspect = cam.aspect;
-            
-            // Calculate size based on Width
+
+            // Calculate size based on Width (tight fit)
             float sizeBasedOnWidth = (targetWidth / screenAspect) / 2f;
-            
-            // Calculate size based on Height (just in case, Board + 40% padding for UI)
-            float targetHeight = boardHeight * 1.5f; 
+
+            // Calculate size based on Height (board + minimal UI padding)
+            float targetHeight = boardHeight * 1.1f;
             float sizeBasedOnHeight = targetHeight / 2f;
 
             // Use the larger one to ensure fit

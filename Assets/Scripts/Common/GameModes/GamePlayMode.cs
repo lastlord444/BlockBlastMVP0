@@ -49,7 +49,7 @@ namespace Common.GameModes
                     UnityEngine.Debug.Log("BlockBlastGameManager Created by GamePlayMode.");
                 }
                 
-                _gameUiCanvas.ShowMessage("Block Blast Started.");
+                // Start mesajını kaldır (rahatsız açılış)
             }
             catch (Exception e)
             {
@@ -63,7 +63,7 @@ namespace Common.GameModes
             _gameUiCanvas.StrategyChanged -= OnStrategyChanged;
 
             _unityGame.StopAsync().Forget();
-            _gameUiCanvas.ShowMessage("Game finished.");
+            // Game finished mesajını kaldır
             
             // Cleanup BlockBlast if needed? 
             // Usually scene reload handles it, but for mode switch:
