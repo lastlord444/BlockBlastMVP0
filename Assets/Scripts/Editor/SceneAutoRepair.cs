@@ -18,6 +18,8 @@ public class SceneAutoRepair : MonoBehaviour
     {
         RepairGameManager();
         RepairBoardRenderer();
+        RebuildGameplayUI();
+        RepairUIReferences();
         SetupValidator();
     }
 
@@ -273,6 +275,87 @@ public class SceneAutoRepair : MonoBehaviour
 
         so.ApplyModifiedProperties();
         Debug.Log($"BoardRenderer Repair Complete! Assigned {newModels.Count} tiles.");
+    }
+
+    private static void RepairUIReferences()
+    {
+        var canvas = GameObject.FindObjectOfType<Common.GameUiCanvas>();
+        if (canvas == null) return;
+
+        SerializedObject so = new SerializedObject(canvas);
+        
+        // Wire MainMenu (UiPanel)
+        var uiPanel = canvas.transform.Find("UiPanel");
+        if (uiPanel != null) so.FindProperty("_mainMenuPanel").objectReferenceValue = uiPanel.gameObject;
+
+        // Wire GameHud (GameplayPanel)
+        var gameplayPanel = canvas.transform.Find("GameplayPanel");
+        if (gameplayPanel != null) so.FindProperty("_gameHudPanel").objectReferenceValue = gameplayPanel.gameObject;
+
+        // Wire GameOver (Create or Find)
+        var gameOver = canvas.transform.Find("GameOverPanel");
+        if (gameOver == null)
+        {
+            var go = new GameObject("GameOverPanel");
+            go.transform.SetParent(canvas.transform, false);
+            go.SetActive(false);
+            
+            // Full Screen Black
+            var img = go.AddComponent<UnityEngine.UI.Image>();
+            img.color = new Color(0,0,0, 0.85f);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            gameOver = go.transform;
+            
+            // Add Home Button
+            var btnObj = new GameObject("HomeButton");
+            btnObj.transform.SetParent(go.transform, false);
+            var btnImg = btnObj.AddComponent<UnityEngine.UI.Image>();
+            btnImg.color = Color.green;
+            var btn = btnObj.AddComponent<UnityEngine.UI.Button>();
+            
+            // Add Restart Button
+            var resObj = new GameObject("RestartButton");
+            resObj.transform.SetParent(go.transform, false);
+            var resImg = resObj.AddComponent<UnityEngine.UI.Image>();
+            resImg.color = Color.yellow;
+            var res = resObj.AddComponent<UnityEngine.UI.Button>();
+            
+            so.FindProperty("_homeButton").objectReferenceValue = btn;
+            so.FindProperty("_restartButton").objectReferenceValue = res;
+        }
+        so.FindProperty("_gameOverPanel").objectReferenceValue = gameOver.gameObject;
+        
+        // Settings Panel
+        var settings = canvas.transform.Find("SettingsPanel");
+        if (settings == null)
+        {
+            var go = new GameObject("SettingsPanel");
+            go.transform.SetParent(canvas.transform, false);
+            go.SetActive(false);
+            var img = go.AddComponent<UnityEngine.UI.Image>();
+            img.color = new Color(0.1f,0.1f,0.2f, 0.95f);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+            settings = go.transform;
+        }
+        so.FindProperty("_settingsPanel").objectReferenceValue = settings.gameObject;
+
+        // Wire Buttons in UiPanel (Start, Settings)
+        if (uiPanel != null)
+        {
+            var startBtn = uiPanel.Find("StartGameButton")?.GetComponent<UnityEngine.UI.Button>();
+            if (startBtn != null) so.FindProperty("_startGameButton").objectReferenceValue = startBtn;
+        }
+
+        so.ApplyModifiedProperties();
+        Debug.Log("UI References Repaired on GameUiCanvas.");
     }
 
     private static GameObject FindPrefab(string name)
